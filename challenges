@@ -1,0 +1,45 @@
+#1.Crie uma consulta mostrando Clientes (apenas seus nomes completos, ID do cliente e país) que não estão nos EUA.
+SELECT FirstName, LastName, CustomerId, Country FROM customers WHERE Country != 'USA';
+
+#2.Fornece uma consulta mostrando as Notas Fiscais de clientes que são do Brasil. A tabela resultante deve mostrar o nome completo do cliente, ID da fatura, data da fatura e país de cobrança.
+SELECT FirstName, LastName, InvoiceId, BillingCountry FROM (SELECT * FROM invoices JOIN customers USING (CustomerId)) WHERE BillingCountry like 'Brazil';
+
+#3.Quantas faturas existiam em 2009 e 2011?
+SELECT COUNT( * ) as "Number of Rows"
+FROM invoices
+WHERE InvoiceDate >= '2009-01-01 00:00:00' AND InvoiceDate <= '2009-12-31 00:00:00' OR InvoiceDate >= '2011-01-01 00:00:00' AND InvoiceDate <= '2011-12-31 00:00:00';
+
+#4.Observando a tabela Invoice_items, forneça uma consulta que conte o número de itens de linha para cada fatura.
+SELECT InvoiceId, SUM(Quantity) AS TotalQuantity
+FROM invoice_items
+GROUP BY InvoiceId;
+
+#5.Forneça uma consulta que inclua o nome da faixa comprada com cada item de linha da fatura.
+SELECT * FROM invoices JOIN (SELECT InvoiceId, Name FROM invoice_items JOIN tracks USING (TrackId)) USING (InvoiceId);
+
+#6.Fornece uma consulta que mostra o número de faturas por país.
+SELECT BillingCountry, COUNT(*) AS BillingTotal FROM invoices GROUP BY BillingCountry;
+
+#7.Qual agente de vendas teve mais vendas em 2009?
+ALTER TABLE customers RENAME COLUMN SupportRepId TO EmployeeId;
+SELECT EmployeeId, TotalSells
+FROM (SELECT EmployeeId, COUNT(*) AS TotalSells FROM (SELECT InvoiceId, EmployeeId FROM (SELECT * FROM invoices WHERE InvoiceDate >= '2009-01-01 00:00:00' AND InvoiceDate <= '2009-12-31 00:00:00') JOIN customers USING (CustomerId)) GROUP BY EmployeeId) 
+WHERE TotalSells = ( SELECT MAX(TotalSells) FROM (SELECT EmployeeId, COUNT(*) AS TotalSells FROM (SELECT InvoiceId, EmployeeId FROM (SELECT * FROM invoices WHERE InvoiceDate >= '2009-01-01 00:00:00' AND InvoiceDate <= '2009-12-31 00:00:00') JOIN customers USING (CustomerId)) GROUP BY EmployeeId));
+
+#8.Qual agente de vendas obteve mais vendas em geral?
+SELECT EmployeeId, TotalSells
+FROM (SELECT EmployeeId, COUNT(*) AS TotalSells FROM (SELECT InvoiceId, EmployeeId FROM invoices JOIN customers USING (CustomerId)) GROUP BY EmployeeId) 
+WHERE TotalSells = ( SELECT MAX(TotalSells) FROM (SELECT EmployeeId, COUNT(*) AS TotalSells FROM (SELECT InvoiceId, EmployeeId FROM invoices JOIN customers USING (CustomerId)) GROUP BY EmployeeId));
+
+#9.Os clientes de qual país gastaram mais?
+SELECT * 
+FROM (SELECT BillingCountry, SUM(Total) AS TotalValue FROM invoices GROUP BY BillingCountry)
+ORDER BY TotalValue DESC;
+
+#10.Forneça uma consulta que mostre os 3 artistas mais vendidos.
+ALTER TABLE artists RENAME COLUMN Name TO ArtistName;
+SELECT ArtistName, TotalValue
+FROM (SELECT * 
+FROM (SELECT ArtistName, SUM(Total) AS TotalValue FROM (SELECT ArtistName, Total FROM (SELECT InvoiceId, ArtistName FROM(SELECT TrackId, ArtistName FROM (SELECT AlbumId, ArtistName FROM albums JOIN artists USING (ArtistId)) JOIN tracks USING (AlbumId)) JOIN invoice_items USING (TrackId)) JOIN invoices USING (InvoiceId)) GROUP BY ArtistName)
+ORDER BY TotalValue DESC)
+LIMIT 3;
